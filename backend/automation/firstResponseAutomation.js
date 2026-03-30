@@ -1,6 +1,7 @@
 import express from "express";
 import jira from "../config/jiraClient.js";
 import { processTicket } from "../functionalities/firstResponse.js";
+import axios from "axios";
 
 const router = express.Router();
 
@@ -13,26 +14,64 @@ const teams = {
   all: "All Teams",
 };
 
+
+async function sendMessageToChatApp(chatId, message) {
+  try {
+    await axios.post("http://localhost:3000/api/v1/chat/external/message", {
+      chatId,
+      content: message,
+      senderName: "Jira Bot",
+    }, {
+      headers: {
+        "x-api-key": "mysecretkey"
+      }
+    });
+
+    console.log("Message sent to chat app");
+  } catch (error) {
+    console.error("Error sending message to chat app:", error.message);
+  }
+}
+
+//  Fetch new tickets for a team and send to chat app
 async function getNewTickets(teamKey) {
   const teamName = teams[teamKey];
   if (!teamName) throw new Error("Invalid team name");
 
-  const jql =
-    teamKey === "all"
-      ? `
-        project = SD
-        AND status = "Waiting for Support"
-        AND created >= -300m
-        ORDER BY created DESC
-      `
-      : `
-        project = SD
-        AND status = "Waiting for Support"
-        AND "Assigned Team" = "${teamName}"
-        AND created >= -300m
-        ORDER BY created DESC
-      `;
-
+  // const jql =
+  //   teamKey === "all"
+  //     ? `
+  //       project = SD
+  //       AND status = "Waiting for Support"
+  //       AND created >= -300m
+  //       ORDER BY created DESC
+  //     `
+  //     : `
+  //       project = SD
+  //       AND status = "Waiting for Support"
+  //       AND "Assigned Team" = "${teamName}"
+  //       AND created >= -300m
+  //       ORDER BY created DESC
+  //     `;
+const jql =
+  teamKey === "all"
+    ? `
+      project = SD
+      AND status = "Waiting for Support"
+      AND created >= -300m
+      AND priority != "Critical"
+      AND issuetype != "Incident"
+      ORDER BY created DESC
+    `
+    : `
+      project = SD
+      AND status = "Waiting for Support"
+      AND "Assigned Team" = "${teamName}"
+      AND created >= -300m
+      AND priority != "Critical"
+      AND issuetype != "Incident"
+      ORDER BY created DESC
+    `;
   const { data } = await jira.get("/rest/api/3/search/jql", {
     params: {
       jql,
@@ -41,8 +80,21 @@ async function getNewTickets(teamKey) {
     },
   });
 
-  return data.issues.map(issue => issue.key);
+  const ticketKeys = data.issues.map(issue => issue.key);
+
+  // 🔥 SEND TO CHAT APP
+  if (ticketKeys.length > 0) {
+    const formattedMessage = `🎫 New Tickets:\n${ticketKeys.join("\n")}`;
+
+    await sendMessageToChatApp(
+      "69a6b671912cf60cb10282e6", // your chatId
+      formattedMessage
+    );
+  }
+
+  return ticketKeys;
 }
+
 
 /**
  * Core handler
