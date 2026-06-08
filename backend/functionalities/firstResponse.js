@@ -33,11 +33,12 @@ async function assignIssue(issueKey) {
   await jira.put(
     `/rest/api/3/issue/${issueKey}/assignee`,
     {
-      accountId: process.env.ASSIGNEE_ACCOUNT_ID_GNANA,
+      // accountId: process.env.ASSIGNEE_ACCOUNT_ID_GNANA,
+      accountId: process.env.ASSIGNEE_ACCOUNT_ID,
     }
   );
 
-  console.log(`👤 Assigned to GNANA → ${issueKey}`);
+  console.log(`👤 Assigned to PRANAY → ${issueKey}`);
 }
 
 // 🔄 3. Move Ticket to In Queue

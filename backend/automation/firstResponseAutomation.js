@@ -53,6 +53,18 @@ async function getNewTickets(teamKey) {
   //       AND created >= -300m
   //       ORDER BY created DESC
   //     `;
+
+const jql =
+`
+    project = SD
+    AND "Assigned Team" = "${teamName}"
+    AND created >= -300m
+    AND priority != "Critical"
+    AND issuetype != "Incident"
+    AND assignee IS EMPTY
+    ORDER BY created DESC
+  `;
+/*
 const jql =
 teamKey === "all"
   ? `
@@ -74,6 +86,7 @@ teamKey === "all"
     AND assignee IS EMPTY
     ORDER BY created DESC
   `;
+  */
   const { data } = await jira.get("/rest/api/3/search/jql", {
     params: {
       jql,
